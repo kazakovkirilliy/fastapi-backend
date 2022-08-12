@@ -67,7 +67,7 @@ def user_create_one(user: user.UserCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{user_id}")
-def user_update_one(user_id: str, updated_user: user.UserUpdate, db: Session = Depends(get_db), response_model=user.UserResponse):
+def user_update_one(user_id: str, updated_user: user.UserUpdate, db: Session = Depends(get_db)):
     """
     Update existing user
     """
