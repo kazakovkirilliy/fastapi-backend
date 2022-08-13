@@ -36,16 +36,16 @@ router = APIRouter(prefix="/users", tags=["users"])
 #     )
 
 
-@router.get("/{user_id}", response_model=user.UserResponse, response_class=JSONResponse)
-def user_get_one(user_id: str, db: Session = Depends(get_db)):
+@router.get("/{username}", response_model=user.UserResponse, response_class=JSONResponse)
+def user_get_one(username: str, db: Session = Depends(get_db)):
     """
     Read specific user.
     """
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.username == username).first()
 
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"User with id: {user_id} was not found")
+                            detail=f"User with name: {username} was not found")
 
     return user
 
