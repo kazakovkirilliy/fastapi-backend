@@ -71,15 +71,20 @@ def user_create_one(user: user.UserCreate, db: Session = Depends(get_db)):
     hashed_password = utils.hash(string=user.password)
     user.password = hashed_password
 
-    new_user = User(**user.dict())
+    try:
+        new_user = User(**user.dict())
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
 
-    access_token = oauth2.create_access_token(data={"user_id": new_user.id})
+        access_token = oauth2.create_access_token(
+            data={"user_id": new_user.id})
 
-    return {"access_token": access_token, "token_type": "bearer"}
+        return {"access_token": access_token, "token_type": "bearer"}
+    except:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"User already exists")
 
 
 @router.put("/{user_id}")
