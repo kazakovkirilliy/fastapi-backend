@@ -7,8 +7,9 @@ from fastapi.responses import PlainTextResponse, JSONResponse
 from api.models import User
 from api.routers.common import RequestPager, ResponsePager
 from .. import utils
+from api import oauth2
 
-from ..schemas import user
+from ..schemas import user, token
 
 from ..database import get_db
 
@@ -50,8 +51,21 @@ def user_get_one(username: str, db: Session = Depends(get_db)):
     return user
 
 
-@router.post("", status_code=status.HTTP_201_CREATED, response_model=user.UserResponse)
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=token.Token)
 def user_create_one(user: user.UserCreate, db: Session = Depends(get_db)):
+
+    if (len(user.username) < 4):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Username must be at least 4 letters long")
+    elif (not user.username.isalnum()):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Username must contain only characters and numbers")
+    elif (len(user.password) < 5):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Password must be at least 5 letters long")
+    elif (user.password == "12345" or user.password == "abcde" or user.password == "password" or user.password == user.username):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Provided password is weak")
 
     # hash password
     hashed_password = utils.hash(string=user.password)
@@ -63,7 +77,9 @@ def user_create_one(user: user.UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    return new_user
+    access_token = oauth2.create_access_token(data={"user_id": new_user.id})
+
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.put("/{user_id}")
