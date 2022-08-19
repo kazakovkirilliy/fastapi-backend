@@ -10,7 +10,7 @@ from .. import utils
 from api import oauth2
 
 from ..schemas import user, token
-
+import re
 from ..database import get_db
 
 
@@ -57,7 +57,7 @@ def user_create_one(user: user.UserCreate, db: Session = Depends(get_db)):
     if (len(user.username) < 4):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=f"Username must be at least 4 letters long")
-    elif (not user.username.isalnum()):
+    elif (not re.search("^[a-zA-Z0-9_]{4,}$", user.username)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=f"Username must contain only characters and numbers")
     elif (len(user.password) < 5):
