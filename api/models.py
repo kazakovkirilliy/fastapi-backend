@@ -1,8 +1,12 @@
-from api.database import Base
-from sqlalchemy import TIMESTAMP, Column, ForeignKey, String, text
-from sqlalchemy.orm import relationship
 from uuid import uuid4
+
+from geoalchemy2 import Geography
+from sqlalchemy import (FLOAT, TIMESTAMP, Column, Float, ForeignKey, String,
+                        text)
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+
+from api.database import Base
 
 
 class Post(Base):
@@ -16,7 +20,7 @@ class Post(Base):
     owner_id = Column(UUID(as_uuid=True), ForeignKey(
         "users.id", ondelete="CASCADE"), nullable=False)
 
-    owner = relationship("User")
+    location = relationship("PostLocation", uselist=False)
 
 
 class User(Base):
@@ -47,3 +51,21 @@ class Participation(Base):
 
     user_id = Column(UUID(as_uuid=True), ForeignKey(
         "users.id", ondelete="CASCADE"), primary_key=True)
+
+
+class PostLocation(Base):
+    __tablename__ = "locations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    post_id = Column(UUID(as_uuid=True), ForeignKey(
+        "posts.id", ondelete="CASCADE"))
+
+    country = Column(String)
+    city = Column(String)
+    street = Column(String)
+    house_number = Column(String)
+
+    longitude = Column(Float, nullable=False)
+    latitude = Column(Float, nullable=False)
+    geography = Column(
+        Geography(srid=4326, geometry_type="POINT"), index=True)

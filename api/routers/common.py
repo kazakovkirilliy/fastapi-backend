@@ -1,18 +1,23 @@
-from typing import Optional
+from typing import Generic, Optional, TypeVar
 from fastapi import Query
 from pydantic import BaseModel
 from typing import Literal
+from pydantic.generics import GenericModel
+
+from api.schemas.post import PostWithOwner
 
 
 SortDirection = Literal["asc", "desc"]
 
+T = TypeVar('T', bound=BaseModel)
 
-class ResponsePager(BaseModel):
+
+class ResponsePager(GenericModel, Generic[T]):
     """
     Response wrapper for pageable data.
     """
 
-    content: list
+    content: list[T]
     offset: int
     limit: int
     count: int

@@ -1,20 +1,24 @@
 """
 Main Post API.
 """
-from fastapi import APIRouter, Depends, HTTPException, Response, status
-from fastapi.responses import PlainTextResponse, JSONResponse
-
-from api.models import Post
+import ssl
+import certifi
+import geopy.geocoders
+from api.models import Post, PostLocation
 from api.oauth2 import get_current_user
 from api.routers.common import RequestPager, ResponsePager
-from ..schemas import post, user, token
-
-from ..database import get_db
-
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from geopy.geocoders import Nominatim
 from sqlalchemy.orm import Session
 
+from ..database import get_db
+from ..schemas import post, token
+
+ctx = ssl._create_unverified_context(cafile=certifi.where())
+geopy.geocoders.options.default_ssl_context = ctx
 
 router = APIRouter(prefix="/posts", tags=["posts"])
+geolocator = Nominatim(scheme="http", user_agent="124mclas")
 
 
 @router.get("")
@@ -24,7 +28,7 @@ def post_get_all(paging: RequestPager = Depends(), db: Session = Depends(get_db)
         paging.limit).offset(paging.offset).all()
     total_count = db.query(Post).count()
 
-    return ResponsePager(
+    return ResponsePager[post.PostWithOwner](
         content=content,
         count=len(content),
         limit=paging.limit,
@@ -73,11 +77,35 @@ def post_get_one(post_id: str, db: Session = Depends(get_db), token_data: token.
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=post.PostWithOwner)
 def post_create_one(post: post.PostCreate, db: Session = Depends(get_db), token_data: token.TokenData = Depends(get_current_user)):
-    new_post = Post(owner_id=token_data.user_id, **post.dict())
+
+    post_to_create = {**dict(post)}
+    post_to_create.pop("longitude", None)
+    post_to_create.pop("latitude", None)
+
+    new_post = Post(owner_id=token_data.user_id, **dict(post_to_create))
 
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
+
+    address = {}
+
+    try:
+        addr = geolocator.reverse(
+            f"{post.latitude}, {post.longitude}", language='en').raw['address']
+
+        address["country"] = addr["country"]
+        address["city"] = addr["city"]
+        address["street"] = addr["road"]
+        address["house_number"] = addr["house_number"]
+    except:
+        pass
+
+    new_location = PostLocation(post_id=new_post.id, longitude=post.longitude,
+                                latitude=post.latitude, geography=f'SRID=4326;POINT({post.longitude} {post.latitude})', **address)
+
+    db.add(new_location)
+    db.commit()
 
     return new_post
 
@@ -120,7 +148,10 @@ def post_delete_one(post_id: str, db: Session = Depends(get_db), token_data: tok
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"Post with id: {post_id} was not found")
 
-    if post.owner_id != token_data.user_id:
+    print(post.owner_id)
+    print(token_data.user_id)
+
+    if str(post.owner_id) != token_data.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Not authorized to perform requested action")
 
