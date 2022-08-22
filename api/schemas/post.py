@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID
 from api.schemas.location import LocationResponse
 from api.schemas.user import UserResponse
@@ -34,7 +34,7 @@ class PostWithOwner(PostBase):
     id: UUID
     created_at: datetime
     owner_id: UUID
-    location: LocationResponse
+    location: Optional[LocationResponse]
 
     class Config:
         orm_mode = True
