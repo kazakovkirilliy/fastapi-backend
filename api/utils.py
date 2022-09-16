@@ -10,7 +10,7 @@ def hash(string: str):
     return pwd_context.hash(string)
 
 
-def verify(plain_password, hashed_password):
+def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
 
